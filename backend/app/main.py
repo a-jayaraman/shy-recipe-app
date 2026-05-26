@@ -10,6 +10,7 @@ from app.auth import session as _session_module  # noqa: F401 — triggers start
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.auth.csrf import require_csrf
 from app.db import create_db_and_tables
@@ -74,3 +75,8 @@ app.include_router(recipes.router, prefix=PREFIX, dependencies=_csrf)
 app.include_router(parse.router, prefix=PREFIX, dependencies=_csrf)
 app.include_router(recommend.router, prefix=PREFIX, dependencies=_csrf)
 app.include_router(admin_router.router, prefix=PREFIX, dependencies=_csrf)
+
+# Serve built React frontend — must be mounted last so API routes take priority
+_frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if _frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="static")

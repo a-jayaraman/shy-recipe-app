@@ -12,7 +12,7 @@ export interface ChatMessage {
 export type StreamState = 'idle' | 'streaming' | 'error'
 
 const BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1'
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1'
 
 export function useRecommendStream(model: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])

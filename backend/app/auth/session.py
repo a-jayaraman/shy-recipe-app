@@ -18,7 +18,12 @@ _STATE_MAX_AGE = 60 * 10               # 10 minutes
 
 
 def _cookie_kwargs() -> dict:
-    secure = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    explicit = os.environ.get("SESSION_COOKIE_SECURE", "")
+    if explicit:
+        secure = explicit.lower() == "true"
+    else:
+        # Auto-detect: use secure cookies whenever the frontend is served over HTTPS
+        secure = os.environ.get("FRONTEND_URL", "").startswith("https://")
     domain = os.environ.get("SESSION_COOKIE_DOMAIN", "") or None
     return {"httponly": False, "samesite": "lax", "secure": secure, "domain": domain}
 

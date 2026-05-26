@@ -9,7 +9,6 @@ import { RecipeCard } from '@/components/RecipeCard'
 import { CookingModeOverlay } from '@/components/CookingModeOverlay'
 import { useRecipeDetail, useRecipes } from '@/hooks/useRecipes'
 import { TOTAL_TIME_LABELS, DIFFICULTY_LABELS, cn } from '@/lib/utils'
-import { toast } from 'sonner'
 import type { RecipeFilters } from '@/types/recipe'
 
 const EMPTY_FILTERS: RecipeFilters = {

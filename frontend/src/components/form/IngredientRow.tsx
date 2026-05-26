@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from '@/components/ui/command'
+import { Command, CommandList, CommandItem, CommandEmpty } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'

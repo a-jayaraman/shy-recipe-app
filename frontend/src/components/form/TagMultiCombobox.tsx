@@ -4,7 +4,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge'
 import { X, Search, AlertTriangle } from 'lucide-react'
 import { useAllTags, useTagAliases } from '@/hooks/useTags'
-import { cn } from '@/lib/utils'
 
 type TagCategory = 'cuisine' | 'cooking_method' | 'serve_with' | 'dietary' | 'key_ingredient'
 

@@ -10,10 +10,10 @@ const DIFFICULTY_VALUES = DIFFICULTY_OPTIONS.map(o => o.value) as [string, ...st
 const TOTAL_TIME_VALUES = TOTAL_TIME_OPTIONS.map(o => o.value) as [string, ...string[]]
 
 const ingredientSchema = z.object({
-  amount: z.string().optional().default(''),
-  unit: z.string().optional().default(''),
+  amount: z.string(),
+  unit: z.string(),
   name: z.string().min(1, 'Ingredient name is required'),
-  notes: z.string().optional().default(''),
+  notes: z.string(),
 })
 
 const instructionSchema = z.object({
@@ -22,19 +22,19 @@ const instructionSchema = z.object({
 
 export const recipeFormSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
-  author: z.string().optional().default(''),
-  servings: z.string().optional().default(''),
+  author: z.string(),
+  servings: z.string(),
   course: z.string().refine(v => v === '' || COURSE_VALUES.includes(v), {
     message: 'Invalid course value',
-  }).default(''),
+  }),
   difficulty: z.string().refine(v => v === '' || DIFFICULTY_VALUES.includes(v), {
     message: 'Invalid difficulty value',
-  }).default(''),
-  total_time: z.string().refine(v => v === '' || TOTAL_TIME_VALUES.includes(v), {
+  }),
+  total_time: z.string().refine(v => v === '' || [...TOTAL_TIME_VALUES, 'unknown'].includes(v), {
     message: 'Invalid total_time value',
-  }).default(''),
-  prep_time: z.string().optional().default(''),
-  cook_time: z.string().optional().default(''),
+  }),
+  prep_time: z.string(),
+  cook_time: z.string(),
   ingredients: z
     .array(ingredientSchema)
     .min(1, 'At least one ingredient is required')
@@ -50,11 +50,11 @@ export const recipeFormSchema = z.object({
       { message: 'At least one instruction step must have text' }
     ),
   cuisine: z.array(z.string()).min(1, 'At least one cuisine is required'),
-  cooking_method: z.array(z.string()).default([]),
-  serve_with: z.array(z.string()).default([]),
-  dietary: z.array(z.string()).default([]),
-  key_ingredients: z.array(z.string()).default([]),
-  notes: z.string().optional().default(''),
+  cooking_method: z.array(z.string()),
+  serve_with: z.array(z.string()),
+  dietary: z.array(z.string()),
+  key_ingredients: z.array(z.string()),
+  notes: z.string(),
 })
 
 export type RecipeFormValues = z.infer<typeof recipeFormSchema>

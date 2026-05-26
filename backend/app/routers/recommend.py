@@ -1,13 +1,16 @@
 import os
+from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from app.auth.deps import require_role
 from app.db import engine
 from app.llm.orchestrator import run_recommendation_stream
+from app.models import User, UserRole
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
 
@@ -20,7 +23,10 @@ class RecommendRequest(BaseModel):
 
 
 @router.post("")
-async def recommend(body: RecommendRequest):
+async def recommend(
+    body: RecommendRequest,
+    _: Annotated[User, Depends(require_role(UserRole.viewer))],
+):
     # Session is created inside the generator — Depends(get_session) would close before
     # the StreamingResponse generator runs.
     async def event_generator():

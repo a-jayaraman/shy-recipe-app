@@ -1,12 +1,13 @@
 import json
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
 
+from app.auth.deps import get_current_user, require_role
 from app.db import get_session
 from app import crud, schemas
-from app.models import COURSE_VALUES, DIFFICULTY_VALUES, TOTAL_TIME_VALUES
+from app.models import COURSE_VALUES, DIFFICULTY_VALUES, TOTAL_TIME_VALUES, User, UserRole
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 
@@ -124,8 +125,12 @@ def get_recipe(recipe_id: int, session: Session = Depends(get_session)):
 
 
 @router.post("", response_model=schemas.RecipeWriteResponse, status_code=201)
-def create_recipe(data: schemas.RecipeCreate, session: Session = Depends(get_session)):
-    recipe, warnings = crud.create_recipe(session, data)
+def create_recipe(
+    data: schemas.RecipeCreate,
+    current_user: Annotated[User, Depends(require_role(UserRole.editor))],
+    session: Session = Depends(get_session),
+):
+    recipe, warnings = crud.create_recipe(session, data, created_by=current_user.id)
     result = crud.get_recipe_detail(session, recipe.id)
     _, ingredients, instructions, tags_map = result
     return _build_detail_response(recipe, ingredients, instructions, tags_map, warnings)
@@ -133,9 +138,12 @@ def create_recipe(data: schemas.RecipeCreate, session: Session = Depends(get_ses
 
 @router.put("/{recipe_id}", response_model=schemas.RecipeWriteResponse)
 def update_recipe(
-    recipe_id: int, data: schemas.RecipeCreate, session: Session = Depends(get_session)
+    recipe_id: int,
+    data: schemas.RecipeCreate,
+    current_user: Annotated[User, Depends(require_role(UserRole.editor))],
+    session: Session = Depends(get_session),
 ):
-    result = crud.update_recipe(session, recipe_id, data)
+    result = crud.update_recipe(session, recipe_id, data, updated_by=current_user.id)
     if not result:
         raise HTTPException(404, detail="Recipe not found")
     recipe, warnings = result
@@ -146,9 +154,12 @@ def update_recipe(
 
 @router.patch("/{recipe_id}", response_model=schemas.RecipeWriteResponse)
 def patch_recipe(
-    recipe_id: int, data: schemas.RecipePatch, session: Session = Depends(get_session)
+    recipe_id: int,
+    data: schemas.RecipePatch,
+    current_user: Annotated[User, Depends(require_role(UserRole.editor))],
+    session: Session = Depends(get_session),
 ):
-    result = crud.patch_recipe(session, recipe_id, data)
+    result = crud.patch_recipe(session, recipe_id, data, updated_by=current_user.id)
     if not result:
         raise HTTPException(404, detail="Recipe not found")
     recipe, warnings = result
@@ -158,6 +169,10 @@ def patch_recipe(
 
 
 @router.delete("/{recipe_id}", status_code=204)
-def delete_recipe(recipe_id: int, session: Session = Depends(get_session)):
+def delete_recipe(
+    recipe_id: int,
+    _: Annotated[User, Depends(require_role(UserRole.editor))],
+    session: Session = Depends(get_session),
+):
     if not crud.delete_recipe(session, recipe_id):
         raise HTTPException(404, detail="Recipe not found")

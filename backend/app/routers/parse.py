@@ -1,13 +1,16 @@
 import json
 import os
+from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from app.auth.deps import require_role
 from app.db import get_session
 from app import crud
+from app.models import User, UserRole
 from app.schemas import ParseRecipeResponse, IngredientIn
 
 router = APIRouter(prefix="/parse-recipe", tags=["parse"])
@@ -75,6 +78,7 @@ class ParseRecipeRequest(BaseModel):
 @router.post("", response_model=ParseRecipeResponse)
 async def parse_recipe(
     body: ParseRecipeRequest,
+    _: Annotated[User, Depends(require_role(UserRole.editor))],
     session: Session = Depends(get_session),
 ):
     api_key = os.environ.get("OPENROUTER_API_KEY")

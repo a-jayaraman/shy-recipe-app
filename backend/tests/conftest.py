@@ -1,14 +1,24 @@
+import os
 import pytest
 from datetime import date
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy import event
 
+# Provide required env vars before app imports so startup validation passes
+os.environ.setdefault("SESSION_SECRET", "test-secret-key-for-tests-only-not-for-prod")
+os.environ.setdefault("GOOGLE_OAUTH_CLIENT_ID", "test-client-id")
+os.environ.setdefault("GOOGLE_OAUTH_CLIENT_SECRET", "test-client-secret")
+os.environ.setdefault("GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:8000/api/v1/auth/callback")
+os.environ.setdefault("FRONTEND_URL", "http://localhost:5173")
+
 from app.main import app
+from app.auth.csrf import require_csrf
+from app.auth.session import create_session_token
 from app.db import get_session
 from app.models import (
     Recipe, Ingredient, Instruction, Tag, RecipeTag,
-    IngredientAlias, TagDisplayName,
+    IngredientAlias, TagDisplayName, User, UserRole,
 )
 
 
@@ -132,10 +142,31 @@ def seeded_session_fixture(session: Session):
 
 @pytest.fixture(name="client")
 def client_fixture(seeded_session: Session):
+    # Create a test editor user so require_role checks pass
+    test_user = User(
+        id=999,
+        google_sub="test_sub_editor",
+        email="editor@test.com",
+        name="Test Editor",
+        role=UserRole.editor.value,
+        is_active=True,
+    )
+    seeded_session.add(test_user)
+    seeded_session.flush()
+
+    session_token = create_session_token(test_user.id, test_user.role)
+
     def override_get_session():
         yield seeded_session
 
+    async def no_csrf():
+        pass
+
     app.dependency_overrides[get_session] = override_get_session
-    with TestClient(app) as client:
-        yield client
+    app.dependency_overrides[require_csrf] = no_csrf
+
+    with TestClient(app) as c:
+        c.cookies.set("session", session_token)
+        yield c
+
     app.dependency_overrides.clear()

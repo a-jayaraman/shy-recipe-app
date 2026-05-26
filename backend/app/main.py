@@ -5,15 +5,35 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI
+# session.py raises RuntimeError at import time if SESSION_SECRET is missing
+from app.auth import session as _session_module  # noqa: F401 — triggers startup validation
+
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth.csrf import require_csrf
 from app.db import create_db_and_tables
 from app.routers import recipes, tags, stats, aliases, parse, recommend
+from app.routers import auth as auth_router
+from app.routers import admin as admin_router
+
+
+_REQUIRED_ENV_VARS = [
+    "SESSION_SECRET",
+    "GOOGLE_OAUTH_CLIENT_ID",
+    "GOOGLE_OAUTH_CLIENT_SECRET",
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    "FRONTEND_URL",
+]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    missing = [v for v in _REQUIRED_ENV_VARS if not os.environ.get(v)]
+    if missing:
+        raise RuntimeError(
+            f"Missing required environment variables: {', '.join(missing)}"
+        )
     create_db_and_tables()
     yield
 
@@ -39,9 +59,18 @@ app.add_middleware(
 )
 
 PREFIX = "/api/v1"
-app.include_router(recipes.router, prefix=PREFIX)
+
+# Public / read-only routers — no CSRF needed
 app.include_router(tags.router, prefix=PREFIX)
 app.include_router(stats.router, prefix=PREFIX)
 app.include_router(aliases.router, prefix=PREFIX)
-app.include_router(parse.router, prefix=PREFIX)
-app.include_router(recommend.router, prefix=PREFIX)
+
+# Auth router — /logout is POST but we skip CSRF there (it's safe; clearing state is idempotent)
+app.include_router(auth_router.router, prefix=PREFIX)
+
+# Mutating routers — require CSRF on all state-changing requests
+_csrf = [Depends(require_csrf)]
+app.include_router(recipes.router, prefix=PREFIX, dependencies=_csrf)
+app.include_router(parse.router, prefix=PREFIX, dependencies=_csrf)
+app.include_router(recommend.router, prefix=PREFIX, dependencies=_csrf)
+app.include_router(admin_router.router, prefix=PREFIX, dependencies=_csrf)

@@ -210,7 +210,9 @@ def get_recipe_detail(
 
 # ── Write operations ──────────────────────────────────────────────────────────
 
-def create_recipe(session: Session, data: RecipeCreate) -> tuple[Recipe, list[str]]:
+def create_recipe(
+    session: Session, data: RecipeCreate, created_by: Optional[int] = None
+) -> tuple[Recipe, list[str]]:
     recipe = Recipe(
         title=data.title,
         title_clean=data.title_clean,
@@ -229,6 +231,8 @@ def create_recipe(session: Session, data: RecipeCreate) -> tuple[Recipe, list[st
         content_raw=data.content_raw,
         has_structured_data=data.has_structured_data,
         existing_tags_json=json.dumps(data.existing_tags),
+        created_by_user_id=created_by,
+        updated_by_user_id=created_by,
     )
     session.add(recipe)
     session.flush()
@@ -259,12 +263,13 @@ def create_recipe(session: Session, data: RecipeCreate) -> tuple[Recipe, list[st
 
 
 def update_recipe(
-    session: Session, recipe_id: int, data: RecipeCreate
+    session: Session, recipe_id: int, data: RecipeCreate, updated_by: Optional[int] = None
 ) -> Optional[tuple[Recipe, list[str]]]:
     recipe = session.get(Recipe, recipe_id)
     if not recipe:
         return None
 
+    recipe.updated_by_user_id = updated_by
     recipe.title = data.title
     recipe.title_clean = data.title_clean
     recipe.blog_id = data.blog_id
@@ -308,13 +313,15 @@ def update_recipe(
 
 
 def patch_recipe(
-    session: Session, recipe_id: int, data: RecipePatch
+    session: Session, recipe_id: int, data: RecipePatch, updated_by: Optional[int] = None
 ) -> Optional[tuple[Recipe, list[str]]]:
     recipe = session.get(Recipe, recipe_id)
     if not recipe:
         return None
 
     patch_dict = data.model_dump(exclude_unset=True)
+    if updated_by is not None:
+        recipe.updated_by_user_id = updated_by
 
     # Fields that need special handling
     tags_fields = {"cuisine", "cooking_method", "serve_with", "dietary", "key_ingredients"}

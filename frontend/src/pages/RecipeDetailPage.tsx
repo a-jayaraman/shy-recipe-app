@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useParams, useLocation, Link } from 'react-router-dom'
 import { ArrowLeft, ChefHat, Clock, Users, Calendar, Utensils, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/auth/useAuth'
+import { hasRole } from '@/types/auth'
 import { TagBadge } from '@/components/TagBadge'
 import { RecipeCard } from '@/components/RecipeCard'
 import { CookingModeOverlay } from '@/components/CookingModeOverlay'
@@ -19,6 +21,8 @@ export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const backSearch = (location.state as { from?: string } | null)?.from ?? ''
+  const { user } = useAuth()
+  const canEdit = user ? hasRole(user, 'editor') : false
 
   const recipeId = id ? Number(id) : undefined
   const { data: recipe, isLoading, isError } = useRecipeDetail(recipeId)
@@ -252,9 +256,11 @@ export function RecipeDetailPage() {
 
           {/* Footer */}
           <div className="mt-10 pt-6 border-t border-border flex items-center justify-between flex-wrap gap-4">
-            <Button variant="outline" asChild>
-              <Link to={`/recipe/${recipeId}/edit`}>Edit this recipe</Link>
-            </Button>
+            {canEdit && (
+              <Button variant="outline" asChild>
+                <Link to={`/recipe/${recipeId}/edit`}>Edit this recipe</Link>
+              </Button>
+            )}
             {recipe.url_slug && (
               <a
                 href={`https://shyblogs.com/${recipe.url_slug}`}

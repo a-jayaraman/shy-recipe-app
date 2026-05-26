@@ -5,6 +5,8 @@ export interface ChatMessage {
   content: string
   recipeIds?: number[]
   toolCalls?: Array<{ name: string; args: Record<string, unknown> }>
+  /** Byte offset in content where "thinking" ends and the final response begins */
+  thinkingBoundary?: number
 }
 
 export type StreamState = 'idle' | 'streaming' | 'error'
@@ -86,6 +88,8 @@ export function useRecommendStream(model: string) {
               i === assistantIdx
                 ? {
                     ...m,
+                    // Everything accumulated so far becomes "thinking"
+                    thinkingBoundary: m.content.length,
                     toolCalls: [
                       ...(m.toolCalls ?? []),
                       {

@@ -1,3 +1,4 @@
+import enum
 from datetime import date, datetime
 from typing import Optional
 from sqlmodel import SQLModel, Field
@@ -37,6 +38,8 @@ class Recipe(SQLModel, table=True):
         default_factory=datetime.utcnow,
         sa_column=Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
     )
+    created_by_user_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    updated_by_user_id: Optional[int] = Field(default=None, foreign_key="users.id")
 
 
 class Ingredient(SQLModel, table=True):
@@ -82,3 +85,29 @@ class TagDisplayName(SQLModel, table=True):
     __tablename__ = "tag_display_names"
     slug: str = Field(primary_key=True)
     display_name: str
+
+
+class UserRole(str, enum.Enum):
+    viewer = "viewer"
+    editor = "editor"
+    admin = "admin"
+
+
+ROLE_HIERARCHY: dict[UserRole, int] = {
+    UserRole.viewer: 0,
+    UserRole.editor: 1,
+    UserRole.admin: 2,
+}
+
+
+class User(SQLModel, table=True):
+    __tablename__ = "users"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    google_sub: str = Field(unique=True, index=True)
+    email: str = Field(index=True)
+    name: Optional[str] = None
+    picture_url: Optional[str] = None
+    role: str = Field(default=UserRole.viewer.value)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_login_at: Optional[datetime] = None

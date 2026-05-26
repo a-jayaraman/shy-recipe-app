@@ -5,6 +5,26 @@ from pydantic import BaseModel, field_validator
 from app.models import COURSE_VALUES, DIFFICULTY_VALUES, TOTAL_TIME_VALUES
 
 
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+    name: Optional[str] = None
+    picture_url: Optional[str] = None
+    role: str
+    is_active: bool
+    created_at: Optional[datetime] = None
+    last_login_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class UserPatch(BaseModel):
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 # ── Sub-objects ──────────────────────────────────────────────────────────────
 
 class IngredientOut(BaseModel):

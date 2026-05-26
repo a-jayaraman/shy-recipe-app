@@ -13,11 +13,15 @@ trap cleanup INT TERM
 
 echo "Starting backend..."
 cd "$ROOT/backend"
+[ -d ".venv" ] || python -m venv .venv
+source .venv/bin/activate
+pip install uv && uv pip install -r requirements.txt --python .venv/bin/python
 PYTHONPATH=. .venv/bin/uvicorn app.main:app --reload --port 8000 &
 BACKEND_PID=$!
 
 echo "Starting frontend..."
 cd "$ROOT/frontend"
+npm install
 npm run dev &
 FRONTEND_PID=$!
 

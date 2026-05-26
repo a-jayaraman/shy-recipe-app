@@ -13,8 +13,16 @@ import { hasRole } from '@/types/auth'
 export function RecipeListPage() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { filters, setFilters, clearFilters, hasActiveFilters } = useUrlFilters()
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const canEdit = user ? hasRole(user, 'editor') : false
+
+  const signInButton = !isLoading && !user
+    ? (
+      <Button size="sm" variant="outline" asChild>
+        <Link to="/login">Sign in</Link>
+      </Button>
+    )
+    : null
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,6 +46,7 @@ export function RecipeListPage() {
               </Link>
             </Button>
           )}
+          {signInButton}
           <UserMenu />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -69,6 +78,7 @@ export function RecipeListPage() {
               <h1 className="font-serif text-2xl font-semibold text-primary">Shy Blog</h1>
               <p className="text-sm text-muted-foreground">Recipe Collection</p>
             </div>
+            {signInButton}
             <UserMenu />
           </div>
           {canEdit && (
@@ -84,7 +94,6 @@ export function RecipeListPage() {
             variant="outline"
             className={`mb-4 w-full gap-1.5 ${!canEdit ? 'mt-2' : ''}`}
             asChild
-            disabled={!user}
           >
             <Link to={user ? '/recommend' : '/login'}>
               <Sparkles size={14} />

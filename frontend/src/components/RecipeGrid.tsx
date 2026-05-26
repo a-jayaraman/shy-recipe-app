@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Shuffle, ArrowUpDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Shuffle, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { RecipeCard } from './RecipeCard'
 import { useRecipes } from '@/hooks/useRecipes'
@@ -10,11 +10,12 @@ interface RecipeGridProps {
   setFilters: (updates: Partial<RecipeFilters>) => void
 }
 
+const PAGE_SIZE = 24
+
 function SkeletonCard() {
   return (
-    <div className="rounded-lg border border-border overflow-hidden animate-pulse">
-      <div className="h-36 bg-muted" />
-      <div className="p-4 space-y-2">
+    <div className="rounded-lg p-0.5 animate-pulse bg-muted">
+      <div className="rounded-[6px] bg-card p-4 space-y-2">
         <div className="h-4 bg-muted rounded w-3/4" />
         <div className="h-3 bg-muted rounded w-1/2" />
         <div className="flex gap-1">
@@ -28,11 +29,15 @@ function SkeletonCard() {
 
 export function RecipeGrid({ filters, setFilters }: RecipeGridProps) {
   const [shuffleNonce, setShuffleNonce] = useState(0)
-  const { data, isLoading, isError } = useRecipes(filters, 100, 0, shuffleNonce)
+  const [page, setPage] = useState(0)
+  const { data, isLoading, isError } = useRecipes(filters, PAGE_SIZE, page * PAGE_SIZE, shuffleNonce)
+
+  useEffect(() => { setPage(0) }, [filters])
 
   const handleShuffle = () => {
     setFilters({ sort: 'random' })
     setShuffleNonce(n => n + 1)
+    setPage(0)
   }
 
   const handleSort = (sort: string) => {
@@ -54,8 +59,10 @@ export function RecipeGrid({ filters, setFilters }: RecipeGridProps) {
         <p className="text-sm text-muted-foreground">
           {isLoading ? (
             <span className="inline-block h-4 w-32 bg-muted rounded animate-pulse" />
+          ) : data && data.total > 0 ? (
+            <>Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + data.items.length} of {data.total} recipes</>
           ) : (
-            <>Showing {data?.items.length ?? 0} of {data?.total ?? 0} recipes</>
+            <>0 recipes</>
           )}
         </p>
         <div className="flex items-center gap-2">
@@ -108,6 +115,35 @@ export function RecipeGrid({ filters, setFilters }: RecipeGridProps) {
           {data.items.map(recipe => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && data && data.total > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => p - 1)}
+            disabled={page === 0}
+            className="gap-1"
+          >
+            <ChevronLeft size={14} />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page + 1} of {Math.ceil(data.total / PAGE_SIZE)}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= Math.ceil(data.total / PAGE_SIZE) - 1}
+            className="gap-1"
+          >
+            Next
+            <ChevronRight size={14} />
+          </Button>
         </div>
       )}
     </div>

@@ -14,15 +14,12 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const location = useLocation()
 
   return (
-    <Card
-      className="cursor-pointer hover:shadow-md transition-shadow duration-200 overflow-hidden group"
+    <div
+      className="rounded-lg p-0.5 cursor-pointer hover:shadow-md transition-shadow duration-200 group"
+      style={{ background: recipeGradient(recipe.id) }}
       onClick={() => navigate(`/recipe/${recipe.id}`, { state: { from: location.search } })}
     >
-      <div
-        className="h-36 w-full"
-        style={{ background: recipeGradient(recipe.id) }}
-        aria-hidden
-      />
+    <Card className="overflow-hidden border-0 h-full rounded-[6px]">
       <CardContent className="p-4 space-y-2">
         <h3 className="font-serif text-base font-semibold leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {recipe.title_clean}
@@ -64,5 +61,6 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         )}
       </CardContent>
     </Card>
+    </div>
   )
 }

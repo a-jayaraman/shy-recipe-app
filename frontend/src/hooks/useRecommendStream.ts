@@ -50,9 +50,18 @@ export function useRecommendStream(model: string) {
 
     let resp: Response
     try {
+      const csrfToken = document.cookie
+        .split('; ')
+        .find((c) => c.startsWith('csrf_token='))
+        ?.split('=')[1]
+
       resp = await fetch(`${BASE_URL}/recommend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
         body: JSON.stringify({ messages: apiMessages, model }),
         signal: controller.signal,
       })

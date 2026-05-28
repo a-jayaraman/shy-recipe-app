@@ -40,13 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Hydrate from existing session on mount
-    supabase.auth.getSession().then(async ({ data }) => {
-      setUser(await sessionToUser(data.session))
-      setIsLoading(false)
-    })
-
-    // Subscribe to auth state changes (login, logout, token refresh)
+    // onAuthStateChange fires INITIAL_SESSION immediately on subscribe —
+    // no need for a separate getSession() call (which would cause a second
+    // concurrent lock acquisition and deadlock in Firefox).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       setUser(await sessionToUser(session))
       setIsLoading(false)

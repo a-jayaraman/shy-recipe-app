@@ -1,6 +1,6 @@
 import { useQueries } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
-import { fetchRecipeById } from '@/api/recipes'
+import { fetchRecipeById } from '@/queries/recipes'
 import { RecipeCard } from './RecipeCard'
 
 interface RecipeCardRowProps {

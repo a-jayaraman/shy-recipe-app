@@ -407,8 +407,10 @@ Deno.serve(async (req: Request) => {
           continue // next round
         }
 
-        // finish_reason == 'stop'
-        const match = accumulatedText.match(/\{"recipe_ids"\s*:\s*\[([^\]]*)\]\s*\}/)
+        // finish_reason == 'stop' — extract {"recipe_ids": [...]} from the response.
+        // Strip markdown code fences first (LLMs often wrap JSON in ```json ... ```).
+        const stripped = accumulatedText.replace(/```[a-z]*\n?/g, '').replace(/```/g, '')
+        const match = stripped.match(/\{\s*"recipe_ids"\s*:\s*\[[\s\S]*?\]\s*\}/)
         if (match) {
           try {
             const parsed = JSON.parse(match[0])

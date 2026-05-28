@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -11,15 +12,14 @@ export interface ChatMessage {
 
 export type StreamState = 'idle' | 'streaming' | 'error'
 
-const BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 export function useRecommendStream(model: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streamState, setStreamState] = useState<StreamState>('idle')
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  // Keep a ref so sendMessage can read the latest messages without being in its dep array
   const messagesRef = useRef<ChatMessage[]>([])
   useEffect(() => {
     messagesRef.current = messages
@@ -30,12 +30,10 @@ export function useRecommendStream(model: string) {
   }, [])
 
   const sendMessage = useCallback(async (userText: string) => {
-    // Snapshot current history + new user message
     const historyWithUser: ChatMessage[] = [
       ...messagesRef.current,
       { role: 'user', content: userText },
     ]
-    // Index where the assistant placeholder will live
     const assistantIdx = historyWithUser.length
 
     setMessages([...historyWithUser, { role: 'assistant', content: '' }])
@@ -45,22 +43,19 @@ export function useRecommendStream(model: string) {
     const controller = new AbortController()
     abortRef.current = controller
 
-    // API only needs role + content
     const apiMessages = historyWithUser.map(m => ({ role: m.role, content: m.content }))
+
+    // Get the current session token — no CSRF needed with bearer auth
+    const { data: { session } } = await supabase.auth.getSession()
 
     let resp: Response
     try {
-      const csrfToken = document.cookie
-        .split('; ')
-        .find((c) => c.startsWith('csrf_token='))
-        ?.split('=')[1]
-
-      resp = await fetch(`${BASE_URL}/recommend`, {
+      resp = await fetch(`${SUPABASE_URL}/functions/v1/recommend`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+          'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ messages: apiMessages, model }),
         signal: controller.signal,
@@ -97,7 +92,6 @@ export function useRecommendStream(model: string) {
               i === assistantIdx
                 ? {
                     ...m,
-                    // Everything accumulated so far becomes "thinking"
                     thinkingBoundary: m.content.length,
                     toolCalls: [
                       ...(m.toolCalls ?? []),
@@ -135,7 +129,6 @@ export function useRecommendStream(model: string) {
 
         lineBuffer += decoder.decode(value, { stream: true })
 
-        // SSE events are delimited by \n\n; keep incomplete trailing part
         const parts = lineBuffer.split('\n\n')
         lineBuffer = parts.pop() ?? ''
 

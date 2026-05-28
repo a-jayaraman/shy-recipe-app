@@ -1,5 +1,5 @@
 export interface CurrentUser {
-  id: number
+  id: string            // UUID from Supabase Auth (was int in FastAPI)
   email: string
   name: string | null
   picture_url: string | null

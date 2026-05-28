@@ -10,6 +10,7 @@ import { RecipeFormPage } from './pages/RecipeFormPage'
 import { RecommendPage } from './pages/RecommendPage'
 import { LoginPage } from './pages/LoginPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
+import { AuthCallbackPage } from './pages/AuthCallbackPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,11 +22,16 @@ const queryClient = new QueryClient({
 })
 
 export default function App() {
+  const basename = import.meta.env.PROD ? '/shy-recipe-app' : '/'
+
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <AuthProvider>
           <Routes>
+            {/* OAuth callback — must be before auth provider redirects */}
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
 

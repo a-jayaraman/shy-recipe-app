@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/useAuth'
-import { apiClient } from '@/api/client'
+import { fetchAllProfiles, updateProfile } from '@/queries/profiles'
 import type { CurrentUser } from '@/types/auth'
 import {
   Select,
@@ -26,18 +26,18 @@ import { UserCircle2 } from 'lucide-react'
 function useAdminUsers() {
   return useQuery({
     queryKey: ['admin', 'users'],
-    queryFn: () => apiClient.get<CurrentUser[]>('/admin/users').then((r) => r.data),
+    queryFn: fetchAllProfiles,
   })
 }
 
 function useUpdateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { role?: string; is_active?: boolean } }) =>
-      apiClient.patch<CurrentUser>(`/admin/users/${id}`, data).then((r) => r.data),
+    mutationFn: ({ id, data }: { id: string; data: { role?: string; is_active?: boolean } }) =>
+      updateProfile(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      const msg = (err as Error)?.message
       toast.error(msg ?? 'Failed to update user')
     },
   })
@@ -127,7 +127,7 @@ export function AdminUsersPage() {
                         ) : (
                           <UserCircle2 className="size-7 text-muted-foreground flex-shrink-0" />
                         )}
-                        <span className="font-medium">{u.name ?? '—'}</span>
+                        <span className="font-medium">{u.name ?? u.email}</span>
                         {isSelf && (
                           <span className="text-xs text-muted-foreground">(you)</span>
                         )}

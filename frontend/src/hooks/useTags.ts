@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchAllTags, fetchTagAliases, fetchIngredientAliases } from '../api/tags'
+import { fetchAllTags, fetchTagAliases, fetchIngredientAliases } from '@/queries/tags'
 
 export const TAGS_QUERY_KEY = ['tags'] as const
 export const TAG_ALIASES_QUERY_KEY = ['aliases', 'tags'] as const

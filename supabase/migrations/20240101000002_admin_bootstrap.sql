@@ -1,0 +1,18 @@
+-- One-time script: promote INITIAL_ADMIN_EMAILS to admin role.
+-- Run this in the Supabase SQL editor after the relevant users have signed in
+-- (so their profiles rows exist).
+--
+-- Usage: replace the email list below with your admin emails before running.
+--
+--   update public.profiles
+--   set role = 'admin'
+--   where email in ('you@example.com', 'other@example.com');
+
+-- Parameterised version (requires pg_settings access):
+-- update public.profiles
+-- set role = 'admin'
+-- where email = any(
+--   string_to_array(
+--     current_setting('app.initial_admin_emails', true), ','
+--   )
+-- );

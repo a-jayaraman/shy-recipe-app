@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Plus, Send, Loader2, Check, X, RotateCcw } from 'lucide-react'
-import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ChatMessage } from '@/components/ChatMessage'
 import { SuggestedPromptChip } from '@/components/SuggestedPromptChip'
 import { useRecommendStream } from '@/hooks/useRecommendStream'
-import { apiClient } from '@/api/client'
 
 const DEFAULT_MODEL = '~anthropic/claude-haiku-latest'
 
@@ -51,7 +49,6 @@ export function RecommendPage() {
   }, [inputText])
 
   const validateModel = useCallback(async (modelId: string) => {
-    // Cancel any in-flight validation request
     validateAbortRef.current?.abort()
     const controller = new AbortController()
     validateAbortRef.current = controller
@@ -65,14 +62,23 @@ export function RecommendPage() {
     setValidationState('validating')
     setValidationError(null)
     try {
-      const { data } = await apiClient.get<{ valid: boolean; display_name: string | null }>(
-        '/recommend/validate-model',
-        { params: { model_id: modelId }, signal: controller.signal }
-      )
+      // OpenRouter's public models endpoint — no auth required
+      const res = await fetch('https://openrouter.ai/api/v1/models', { signal: controller.signal })
       if (controller.signal.aborted) return
-      if (data?.valid) {
+      if (!res.ok) throw new Error(`OpenRouter returned ${res.status}`)
+      const json = await res.json() as { data: Array<{ id: string; name?: string }> }
+      // Strip leading ~ (OpenRouter "latest" alias prefix) before matching
+      const bare = modelId.replace(/^~/, '')
+      const match = json.data.find(m => m.id === bare || m.id.startsWith(bare))
+      if (match) {
         setValidationState('valid')
-        setModelDisplayName(data.display_name)
+        setModelDisplayName(match.name ?? match.id)
+        setValidationError(null)
+      } else if (modelId.startsWith('~')) {
+        // OpenRouter "latest" aliases (~ prefix) resolve at request time and
+        // don't appear in the /models listing — accept them without erroring.
+        setValidationState('valid')
+        setModelDisplayName(bare)
         setValidationError(null)
       } else {
         setValidationState('invalid')
@@ -80,15 +86,10 @@ export function RecommendPage() {
         setValidationError('Model not found on OpenRouter')
       }
     } catch (err: unknown) {
-      // Ignore cancellations — a newer request is already in flight
-      if (axios.isCancel(err)) return
+      if ((err as Error).name === 'AbortError') return
       setValidationState('invalid')
       setModelDisplayName(null)
-      // Distinguish network/server errors from model-not-found
-      const isNetworkErr =
-        axios.isAxiosError(err) &&
-        (err.code === 'ERR_NETWORK' || err.code === 'ECONNREFUSED' || !err.response)
-      setValidationError(isNetworkErr ? 'Could not reach server' : 'Validation failed')
+      setValidationError('Could not reach OpenRouter')
     }
   }, [])
 

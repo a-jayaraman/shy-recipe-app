@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchRecipes, fetchRecipeById, createRecipe, updateRecipe, deleteRecipe, parseRecipeText } from '../api/recipes'
+import { fetchRecipes, fetchRecipeById, createRecipe, updateRecipe, deleteRecipe, parseRecipeText } from '@/queries/recipes'
 import type { RecipeFilters, RecipeWritePayload } from '../types/recipe'
 
 export function useRecipes(filters: RecipeFilters, limit = 100, offset = 0, shuffleNonce = 0) {

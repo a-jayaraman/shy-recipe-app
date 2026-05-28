@@ -1,0 +1,24 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Supabase Edge Function local secrets (never commit)
+supabase/functions/.env
+
+# Supabase CLI local artifacts
+supabase/.temp/
+supabase/package.json
+supabase/package-lock.json
+supabase/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

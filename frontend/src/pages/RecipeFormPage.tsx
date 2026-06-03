@@ -216,9 +216,9 @@ export function RecipeFormPage() {
       result.warnings.forEach(w => toast.warning(w))
       toast.success(isEdit ? 'Recipe updated' : 'Recipe created')
       navigate(`/recipe/${result.id}`)
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail
-      toast.error(detail ? String(detail) : 'Failed to save recipe')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save recipe'
+      toast.error(message)
     }
   }
 

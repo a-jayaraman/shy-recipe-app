@@ -275,3 +275,100 @@ class TestParseRecipe:
         names = [i["name"] for i in resp.json().get("ingredients", [])]
         # "hing" is an alias for "asafoetida" in the aliases table
         assert "asafoetida" in names, f"Expected 'asafoetida' (alias of 'hing') in: {names}"
+
+# ---------------------------------------------------------------------------
+# Recipe database CRUD
+# ---------------------------------------------------------------------------
+
+REST_URL = f"{SUPABASE_URL}/rest/v1"
+
+
+def _rest_headers(prefer: str | None = None) -> dict:
+    h = dict(ADMIN_HEADERS)
+    if prefer:
+        h["Prefer"] = prefer
+    return h
+
+
+class TestRecipeDatabase:
+    """Integration tests for creating and deleting recipes directly via the REST API."""
+
+    def test_create_and_delete_recipe(self):
+        unique = uuid.uuid4().hex[:8]
+        title = f"Test Recipe {unique}"
+
+        # --- Create recipe row ---
+        resp = requests.post(
+            f"{REST_URL}/recipes",
+            headers=_rest_headers("return=representation"),
+            json={
+                "title": title,
+                "title_clean": title.lower(),
+                "author": "Test Author",
+                "servings": "2",
+                "times_json": json.dumps({"prep": "5 min", "cook": "10 min"}),
+                "course": "main",
+                "difficulty": "easy",
+                "total_time": "under-30-min",
+                "notes": "Created by automated test",
+            },
+        )
+        assert resp.status_code == 201, f"Create failed ({resp.status_code}): {resp.text[:300]}"
+        recipe = resp.json()[0]
+        recipe_id = recipe["id"]
+        assert recipe["title"] == title
+
+        # --- Add ingredients ---
+        resp = requests.post(
+            f"{REST_URL}/ingredients",
+            headers=_rest_headers("return=minimal"),
+            json=[
+                {"recipe_id": recipe_id, "order_idx": 0, "amount": "1", "unit": "cup", "name": "water", "notes": None},
+                {"recipe_id": recipe_id, "order_idx": 1, "amount": "2", "unit": "tbsp", "name": "sugar", "notes": None},
+            ],
+        )
+        assert resp.status_code in (200, 201), f"Insert ingredients failed: {resp.text[:300]}"
+
+        # --- Add instructions ---
+        resp = requests.post(
+            f"{REST_URL}/instructions",
+            headers=_rest_headers("return=minimal"),
+            json=[
+                {"recipe_id": recipe_id, "order_idx": 0, "text": "Boil the water."},
+                {"recipe_id": recipe_id, "order_idx": 1, "text": "Add sugar and stir."},
+            ],
+        )
+        assert resp.status_code in (200, 201), f"Insert instructions failed: {resp.text[:300]}"
+
+        # --- Verify recipe exists with related rows ---
+        resp = requests.get(
+            f"{REST_URL}/recipes",
+            headers=ADMIN_HEADERS,
+            params={
+                "id": f"eq.{recipe_id}",
+                "select": "id,title,ingredients(name),instructions(text)",
+            },
+        )
+        assert resp.status_code == 200
+        rows = resp.json()
+        assert len(rows) == 1, "Recipe should exist after creation"
+        assert rows[0]["title"] == title
+        assert len(rows[0]["ingredients"]) == 2
+        assert len(rows[0]["instructions"]) == 2
+
+        # --- Delete recipe (cascades to ingredients/instructions via FK) ---
+        resp = requests.delete(
+            f"{REST_URL}/recipes",
+            headers=_rest_headers("return=minimal"),
+            params={"id": f"eq.{recipe_id}"},
+        )
+        assert resp.status_code in (200, 204), f"Delete failed ({resp.status_code}): {resp.text[:300]}"
+
+        # --- Verify recipe is gone ---
+        resp = requests.get(
+            f"{REST_URL}/recipes",
+            headers=ADMIN_HEADERS,
+            params={"id": f"eq.{recipe_id}", "select": "id"},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == [], "Recipe should be gone after deletion"
